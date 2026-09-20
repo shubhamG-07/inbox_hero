@@ -1,0 +1,122 @@
+{
+  "student": "Shubham Gupta, evernorth-aai-1161813",
+  "repo": "https://github.com/shubhamG-07/inbox_hero/tree/feature/inboxHero",
+  "system": {
+    "framework": "none",
+    "model": "gemma4:e2b via Ollama for local execution",
+    "messages_processed": 100,
+    "rule_handled": 45,
+    "dispositions": [
+      "reply",
+      "archive",
+      "defer",
+      "delegate",
+      "escalate"
+    ],
+    "retrieval": "thread-walk",
+    "irreversible": [
+      "send",
+      "delete"
+    ],
+    "reversible": [
+      "draft",
+      "label",
+      "archive",
+      "defer"
+    ],
+    "gate": "both",
+    "preference_demo": "m015: always CC Priya on Hartwell & Cho legal mail"
+  },
+  "capabilities": [
+    {
+      "id": "R1",
+      "name": "Zero the inbox",
+      "tier": "B",
+      "claim": "Assigns every message exactly one disposition with a reason, leaving none untouched.",
+      "command": "python demo.py --cap R1",
+      "observable": "Prints a table of all messages with dispositions, leaving 0 undecided.",
+      "evidence": "trace.jsonl events tagged cap=R1"
+    },
+    {
+      "id": "R2",
+      "name": "Grounded reply",
+      "tier": "B",
+      "claim": "Drafts a reply grounded in a specific earlier message and cites the message IDs it used.",
+      "command": "python demo.py --cap R2 --msg m008",
+      "observable": "Generates a draft answering m008 by extracting the staging URL from m003, appending 'cited: [m003]'.",
+      "evidence": "trace.jsonl events tagged cap=R2"
+    },
+    {
+      "id": "R3",
+      "name": "Gate the irreversible",
+      "tier": "C",
+      "claim": "Never sends or deletes without per-action approval or an explicit --dry-run mode.",
+      "command": "python demo.py --cap R3 --msg m049 --dry-run",
+      "observable": "Prints proposed irreversible actions but suppresses them in dry-run mode, writing nothing to the outbox.",
+      "evidence": "trace.jsonl events tagged cap=R3"
+    },
+    {
+      "id": "R4",
+      "name": "Persistent preference",
+      "tier": "C",
+      "claim": "Records a stated preference from one message and applies it to a subsequent execution.",
+      "command": "python demo.py --cap R4 --msg m018",
+      "observable": "Loads the previously saved CC preference from prefs.json and applies it automatically to the legal email.",
+      "evidence": "prefs.json on disk; trace.jsonl events tagged cap=R4"
+    },
+    {
+      "id": "R5",
+      "name": "Refuse embedded instructions",
+      "tier": "C",
+      "claim": "Detects hostile instructions, refuses them, flags them for the user, and leaves messages in place.",
+      "command": "python demo.py --cap R5",
+      "observable": "Identifies 4 hostile injections (including m017 and m024), logs refusals, and bypasses execution.",
+      "evidence": "trace.jsonl events tagged cap=R5"
+    },
+    {
+      "id": "R6",
+      "name": "Dashboard",
+      "tier": "C",
+      "claim": "Generates a three-pane interactive HTML view surfacing multi-message commitments and schedule conflicts.",
+      "command": "python demo.py --cap R6",
+      "observable": "Writes dashboard.html highlighting the Sep 15 meeting conflict and the multi-message board deck deadline.",
+      "evidence": "dashboard.html; trace.jsonl events tagged cap=R6"
+    },
+    {
+      "id": "X1",
+      "name": "Natural Language Q&A Search",
+      "tier": "B",
+      "claim": "Finds the most relevant thread based on a natural language query and uses the LLM to extract the answer.",
+      "command": "python demo.py --cap X1 --query \"what is the new staging broker url?\"",
+      "observable": "Locates the t-api thread and prints the exact amqp staging URL directly to the terminal.",
+      "evidence": "trace.jsonl events tagged cap=X1"
+    },
+    {
+      "id": "X2",
+      "name": "Morning Digest",
+      "tier": "A",
+      "claim": "Produces a single-pass lookup showing how many items were auto-archived and which unread items need human attention.",
+      "command": "python demo.py --cap X2",
+      "observable": "Prints a summary detailing 45 auto-archived messages and lists the top pending emails.",
+      "evidence": "trace.jsonl events tagged cap=X2"
+    },
+    {
+      "id": "X3",
+      "name": "Follow-up Tracking",
+      "tier": "B",
+      "claim": "Identifies outbound messages sent by the user that have not received any subsequent reply in the thread.",
+      "command": "python demo.py --cap X3",
+      "observable": "Lists outbound messages that are currently the terminal node in their conversation thread.",
+      "evidence": "trace.jsonl events tagged cap=X3"
+    },
+    {
+      "id": "X4",
+      "name": "Smart Scheduler & Conflict Resolver",
+      "tier": "C",
+      "claim": "Detects a meeting request conflict, uses the LLM to propose three alternatives, and routes the draft to the human-in-the-loop gate for approval.",
+      "command": "python demo.py --cap X4",
+      "observable": "Prints the detected Sept 15 conflict, generates alternative slots for Sept 16, and triggers the (y/n) irreversible action gate.",
+      "evidence": "trace.jsonl events tagged cap=X4 and the outbox JSON file if approved."
+    }
+  ]
+}
