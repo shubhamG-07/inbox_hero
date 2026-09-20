@@ -7,6 +7,7 @@ from pipeline.rules import triage_by_rules
 from pipeline.retriever import get_thread_context, format_context_for_prompt
 from trace import log_event
 from pipeline.gate import process_action
+from memory import save_preference, load_preferences
 
 # Initialize LLM Client for Ollama
 # By overriding the base_url, we redirect the client away from OpenAI's servers to your local machine.
@@ -140,25 +141,45 @@ def run_r2_grounded_reply(target_msg_id: str = "m008"):
 def run_r3_gate(is_dry_run: bool, target_msg_id: str):
     """
     Capability R3: Gate irreversible actions.
-    Simulates a pipeline attempting to do actions on the specified target message.
+    Now integrated with R4 memory to apply standing preferences to the payload.
     """
+    with open(INBOX_FILE, "r") as f:
+        inbox = json.load(f)
+
+    target_msg = next((m for m in inbox if m["id"] == target_msg_id), None)
+    if not target_msg:
+        print(f"Message {target_msg_id} not found.")
+        return
+
     print(f"Simulating agent actions for target: {target_msg_id}...\n")
     
-    # 1. A reversible action (should happen automatically)
+    # 1. A reversible action
     process_action(
         "archive", 
         {"target_id": target_msg_id, "reason": "User requested archive"}, 
         is_dry_run
     )
     
-    # 2. An irreversible action (should be gated)
-    process_action(
-        "send", 
-        {"reply_to": target_msg_id, "to": "test@paperjet.io", "body": "Executing requested action."}, 
-        is_dry_run
-    )
+    # 2. Build the SEND payload dynamically
+    send_payload = {
+        "reply_to": target_msg_id,
+        "to": target_msg.get("from", "unknown"),
+        "body": "Executing requested action."
+    }
     
-    # 3. Another irreversible action
+    # --- Integration with Part 5 (Memory) ---
+    prefs = load_preferences()
+    if "hartwellcho.com" in target_msg.get("from", ""):
+        legal_cc = prefs.get("legal_cc")
+        if legal_cc:
+            send_payload["cc"] = legal_cc
+            print(f"[SYSTEM] Applied standing preference: CC'ing {legal_cc}")
+    # ----------------------------------------
+    
+    # 3. An irreversible action (Send)
+    process_action("send", send_payload, is_dry_run)
+    
+    # 4. Another irreversible action (Delete)
     process_action(
         "delete", 
         {"target_id": target_msg_id, "reason": "Identified as spam/phishing"}, 
@@ -167,9 +188,65 @@ def run_r3_gate(is_dry_run: bool, target_msg_id: str):
     
     print("\nR3 test complete. Check trace.jsonl for logs.")
 
+def run_r4_persistent_preference(target_msg_id: str):
+    """
+    Capability R4: Persistent preference.
+    Run 1 (e.g., --msg m015): Learns the preference, saves to disk, and exits.
+    Run 2 (e.g., --msg m018): Loads from disk and applies it on a fresh run.
+    """
+    with open(INBOX_FILE, "r") as f:
+        inbox = json.load(f)
+
+    target_msg = next((m for m in inbox if m["id"] == target_msg_id), None)
+    if not target_msg:
+        print(f"Message {target_msg_id} not found.")
+        return
+
+    print(f"Processing target message: {target_msg_id}")
+    print(f"Subject: {target_msg.get('subject')}\n")
+    
+    # 1. Learning Phase
+    if target_msg_id == "m015":
+        print("Detected standing instruction: CC Priya on Hartwell & Cho legal mail.")
+        save_preference("legal_cc", "priya@paperjet.io")
+        print("\n[MEMORY] Preference saved to disk. The process will now exit.")
+        
+        log_event(
+            cap_id="R4",
+            event_type="preference_learned",
+            details={
+                "source_msg": target_msg_id, 
+                "preference_key": "legal_cc", 
+                "value": "priya@paperjet.io"
+            }
+        )
+
+    # 2. Application Phase
+    elif target_msg_id == "m018" or "hartwellcho.com" in target_msg.get("from", ""):
+        print("Checking memory for standing instructions...")
+        prefs = load_preferences()
+        legal_cc = prefs.get("legal_cc")
+        
+        if legal_cc:
+            print(f"[ACTION] Automatically added {legal_cc} to CC based on standing preference.")
+            log_event(
+                cap_id="R4",
+                event_type="preference_applied",
+                details={
+                    "trigger_msg": target_msg_id, 
+                    "preference_key": "legal_cc", 
+                    "action_taken": f"CC'd {legal_cc}"
+                }
+            )
+        else:
+            print("[ACTION] No standing preference found. Handled normally.")
+            
+    else:
+        print("For this R4 demonstration, please use --msg m015 to learn the preference, and --msg m018 to apply it.")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="inboxHero CLI")
-    parser.add_argument("--cap", type=str, help="Capability to run (e.g., R1, R2, R3, X1)")
+    parser.add_argument("--cap", type=str, help="Capability to run (e.g., R1, R2, R3, R4, X1)")
     parser.add_argument("--msg", type=str, default="m008", help="Target message ID for R2")
     parser.add_argument("--query", type=str, help="Question string for X1 capability")
     parser.add_argument("--dry-run", action="store_true", help="Run without executing irreversible actions")
@@ -181,8 +258,10 @@ if __name__ == "__main__":
     elif args.cap == "R2":
         run_r2_grounded_reply(args.msg)
     elif args.cap == "R3":
-        run_r3_gate(args.dry_run, args.msg)  # <-- Added args.msg here
+        run_r3_gate(args.dry_run, args.msg)
+    elif args.cap == "R4":
+        run_r4_persistent_preference(args.msg)
     elif args.cap == "X1":
         run_x1_inbox_qa(args.query)
     else:
-        print("Please specify a valid capability...")
+        print("Please specify a valid capability, e.g.: python demo.py --cap R4")
