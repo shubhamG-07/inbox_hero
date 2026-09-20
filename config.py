@@ -6,6 +6,11 @@ load_dotenv()
 
 # Base directories
 BASE_DIR = Path(__file__).resolve().parent
+# LLM Configuration (satisfies the environment variable requirement)
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "ollama_local")
+MODEL_NAME = os.getenv("MODEL_NAME", "gemma4:e2b")
+
 DATA_DIR = BASE_DIR / "data"
 OUTBOX_DIR = BASE_DIR / "outbox"
 
