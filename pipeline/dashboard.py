@@ -4,10 +4,10 @@ from config import BASE_DIR
 
 DASHBOARD_FILE = BASE_DIR / "dashboard.html"
 
-def generate_dashboard_html(pending: list, flagged: list, commitments: list, digest: dict, followups: list):
+def generate_dashboard_html(pending: list, flagged: list, commitments: list, digest: dict, followups: list, x4_data: list):
     """
     Renders the dashboard with an executive, consultant-grade UI/UX.
-    Features premium typography, FontAwesome icons, and a strict grid system.
+    Includes all R-series data and X1, X2, X3, and X4 custom capabilities.
     """
     html = f"""
     <!DOCTYPE html>
@@ -17,114 +17,42 @@ def generate_dashboard_html(pending: list, flagged: list, commitments: list, dig
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>inboxHero | Executive Brief</title>
         
-        <!-- Premium Typography & Icons -->
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Merriweather:wght@700&display=swap" rel="stylesheet">
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         
         <style>
             :root {{
-                --mck-navy: #051C2C;
-                --mck-blue: #005F9E;
-                --bg-body: #F4F6F8;
-                --bg-card: #FFFFFF;
-                --border: #E2E8F0;
-                --text-main: #1E293B;
-                --text-muted: #64748B;
-                --danger: #D32F2F;
-                --success: #2E7D32;
-                --warning: #ED6C02;
+                --mck-navy: #051C2C; --mck-blue: #005F9E; --bg-body: #F4F6F8;
+                --bg-card: #FFFFFF; --border: #E2E8F0; --text-main: #1E293B;
+                --text-muted: #64748B; --danger: #D32F2F; --success: #2E7D32;
             }}
             
-            body {{
-                font-family: 'Inter', sans-serif;
-                background-color: var(--bg-body);
-                color: var(--text-main);
-                margin: 0;
-                padding: 0;
-                -webkit-font-smoothing: antialiased;
-            }}
-            
-            /* Top Executive Header */
-            .header-bar {{
-                background-color: var(--mck-navy);
-                color: white;
-                padding: 1.5rem 3rem;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            }}
-            .header-bar h1 {{
-                font-family: 'Merriweather', serif;
-                margin: 0;
-                font-size: 1.5rem;
-                letter-spacing: 0.5px;
-            }}
-            .header-bar .meta {{
-                font-size: 0.85rem;
-                color: #94A3B8;
-                display: flex;
-                gap: 20px;
-                align-items: center;
-            }}
-            
+            body {{ font-family: 'Inter', sans-serif; background-color: var(--bg-body); color: var(--text-main); margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }}
+            .header-bar {{ background-color: var(--mck-navy); color: white; padding: 1.5rem 3rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }}
+            .header-bar h1 {{ font-family: 'Merriweather', serif; margin: 0; font-size: 1.5rem; letter-spacing: 0.5px; }}
+            .header-bar .meta {{ font-size: 0.85rem; color: #94A3B8; display: flex; gap: 20px; align-items: center; }}
             .container {{ padding: 2rem 3rem; max-width: 1600px; margin: 0 auto; }}
             
-            /* KPI Summary Row */
-            .kpi-grid {{
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 1.5rem;
-                margin-bottom: 2rem;
-            }}
-            .kpi-card {{
-                background: var(--bg-card);
-                border-left: 4px solid var(--mck-blue);
-                padding: 1.25rem;
-                border-radius: 4px;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-            }}
+            .kpi-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.5rem; margin-bottom: 2rem; }}
+            .kpi-card {{ background: var(--bg-card); border-left: 4px solid var(--mck-blue); padding: 1.25rem; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; justify-content: space-between; }}
             .kpi-card.danger {{ border-left-color: var(--danger); }}
             .kpi-card.success {{ border-left-color: var(--success); }}
             .kpi-info h3 {{ margin: 0 0 5px 0; font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }}
             .kpi-info .value {{ font-size: 1.75rem; font-weight: 600; font-family: 'Merriweather', serif; color: var(--mck-navy); margin: 0; }}
             .kpi-icon {{ font-size: 2rem; color: var(--border); opacity: 0.5; }}
             
-            /* Main Content Grids */
-            .grid {{
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-                gap: 1.5rem;
-                margin-bottom: 1.5rem;
-            }}
-            .card {{
-                background: var(--bg-card);
-                border: 1px solid var(--border);
-                border-radius: 6px;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-                overflow: hidden;
-            }}
+            .grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem; }}
+            .card {{ background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); overflow: hidden; display: flex; flex-direction: column; }}
             .card-full {{ grid-column: 1 / -1; }}
             
-            .card-header {{
-                padding: 1.25rem 1.5rem;
-                border-bottom: 1px solid var(--border);
-                background: #F8FAFC;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }}
+            .card-header {{ padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); background: #F8FAFC; display: flex; align-items: center; gap: 10px; }}
             .card-header h2 {{ margin: 0; font-size: 1rem; color: var(--mck-navy); font-weight: 600; display: flex; align-items: center; gap: 8px; width: 100%; }}
             .card-header h2 i {{ color: var(--mck-blue); }}
             .badge {{ margin-left: auto; background: var(--border); padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; color: var(--text-main); }}
             
-            /* Table Styling */
-            table {{ width: 100%; border-collapse: collapse; }}
+            table {{ width: 100%; border-collapse: collapse; margin: 0; }}
             th, td {{ padding: 1rem 1.5rem; text-align: left; border-bottom: 1px solid var(--border); font-size: 0.875rem; }}
-            th {{ font-weight: 600; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; background: #FFFFFF; }}
+            th {{ font-weight: 600; color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; background: #FFFFFF; position: sticky; top: 0; }}
             
             .interactive-row {{ cursor: pointer; transition: background 0.2s ease; }}
             .interactive-row:hover {{ background-color: #F8FAFC; }}
@@ -136,12 +64,11 @@ def generate_dashboard_html(pending: list, flagged: list, commitments: list, dig
             .pill.red {{ background: #FEE2E2; color: #DC2626; }}
             .pill.green {{ background: #DCFCE7; color: #16A34A; }}
             
-            /* Terminal Input Generator */
             .terminal-box {{ padding: 1.5rem; }}
             .input-group {{ display: flex; gap: 10px; }}
-            .input-group input {{ flex: 1; padding: 12px 15px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.95rem; font-family: 'Inter', sans-serif; outline: none; transition: border 0.2s; }}
+            .input-group input {{ flex: 1; padding: 12px 15px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.95rem; font-family: 'Inter', sans-serif; outline: none; }}
             .input-group input:focus {{ border-color: var(--mck-blue); }}
-            .input-group button {{ background: var(--mck-navy); color: white; border: none; border-radius: 4px; padding: 0 25px; cursor: pointer; font-weight: 500; font-family: 'Inter', sans-serif; transition: background 0.2s; }}
+            .input-group button {{ background: var(--mck-navy); color: white; border: none; border-radius: 4px; padding: 0 25px; cursor: pointer; font-weight: 500; font-family: 'Inter', sans-serif; }}
             .input-group button:hover {{ background: var(--mck-blue); }}
             
             #cmd-output-container {{ display: none; margin-top: 15px; padding: 15px; background: #0F172A; border-radius: 6px; border-left: 4px solid var(--mck-blue); }}
@@ -151,7 +78,6 @@ def generate_dashboard_html(pending: list, flagged: list, commitments: list, dig
     </head>
     <body>
         
-        <!-- Header -->
         <div class="header-bar">
             <h1><i class="fa-solid fa-layer-group" style="margin-right: 10px; opacity: 0.8;"></i>inboxHero Executive Brief</h1>
             <div class="meta">
@@ -161,35 +87,22 @@ def generate_dashboard_html(pending: list, flagged: list, commitments: list, dig
         </div>
 
         <div class="container">
-            <!-- KPI Summary Row -->
             <div class="kpi-grid">
                 <div class="kpi-card success">
-                    <div class="kpi-info">
-                        <h3>Auto-Archived</h3>
-                        <p class="value">{digest['archived']}</p>
-                    </div>
+                    <div class="kpi-info"><h3>Auto-Archived</h3><p class="value">{digest['archived']}</p></div>
                     <i class="fa-solid fa-check-double kpi-icon"></i>
                 </div>
                 <div class="kpi-card">
-                    <div class="kpi-info">
-                        <h3>Pending Actions</h3>
-                        <p class="value">{len(pending)}</p>
-                    </div>
+                    <div class="kpi-info"><h3>Pending Actions</h3><p class="value">{len(pending)}</p></div>
                     <i class="fa-solid fa-hourglass-half kpi-icon"></i>
                 </div>
                 <div class="kpi-card {'danger' if flagged else ''}">
-                    <div class="kpi-info">
-                        <h3>Security Threats</h3>
-                        <p class="value">{len(flagged)}</p>
-                    </div>
+                    <div class="kpi-info"><h3>Security Threats</h3><p class="value">{len(flagged)}</p></div>
                     <i class="fa-solid fa-shield-halved kpi-icon"></i>
                 </div>
                 <div class="kpi-card">
-                    <div class="kpi-info">
-                        <h3>Active Commitments</h3>
-                        <p class="value">{len(commitments)}</p>
-                    </div>
-                    <i class="fa-solid fa-handshake kpi-icon"></i>
+                    <div class="kpi-info"><h3>Awaiting Reply</h3><p class="value">{len(followups)}</p></div>
+                    <i class="fa-solid fa-reply-all kpi-icon"></i>
                 </div>
             </div>
             
@@ -204,7 +117,7 @@ def generate_dashboard_html(pending: list, flagged: list, commitments: list, dig
     """
     
     if not digest['needs_me']:
-        html += "<tr><td style='color: var(--text-muted);'><i class='fa-solid fa-leaf' style='color: var(--success); margin-right: 8px;'></i> Inbox Zero achieved. No pending unread items.</td></tr>"
+        html += "<tr><td style='color: var(--text-muted);'><i class='fa-solid fa-leaf' style='color: var(--success); margin-right: 8px;'></i> Inbox Zero achieved.</td></tr>"
     else:
         for m in digest['needs_me']:
             html += f"<tr><td><div style='font-weight: 600; margin-bottom: 3px;'>{m['from']}</div><div style='color: var(--text-muted); font-size: 0.8rem;'>{m['subject']}</div></td></tr>"
@@ -248,7 +161,7 @@ def generate_dashboard_html(pending: list, flagged: list, commitments: list, dig
     """
     
     if not flagged:
-        html += "<tr><td colspan='3' style='color: var(--text-muted);'><i class='fa-solid fa-check-circle' style='color: var(--success); margin-right: 8px;'></i> No threats detected in this run.</td></tr>"
+        html += "<tr><td colspan='3' style='color: var(--text-muted);'><i class='fa-solid fa-check-circle' style='color: var(--success); margin-right: 8px;'></i> No threats detected.</td></tr>"
     else:
         for f in flagged:
             html += f"""
@@ -257,14 +170,14 @@ def generate_dashboard_html(pending: list, flagged: list, commitments: list, dig
                             <td><span class="pill red"><i class="fa-solid fa-ban"></i> {f['action_taken']}</span></td>
                             <td style="color: var(--border); text-align: center;"><i class="fa-solid fa-chevron-down"></i></td>
                         </tr>
-                        <tr><td colspan="3" style="padding:0; border:none;"><div id="flagged-{f['msg_id']}" class="details-content" style="border-left-color: var(--danger);"><strong>Detected Threat:</strong> {f['threat']}</div></td></tr>
+                        <tr><td colspan="3" style="padding:0; border:none;"><div id="flagged-{f['msg_id']}" class="details-content" style="border-left-color: var(--danger);"><strong>Threat:</strong> {f['threat']}</div></td></tr>
             """
 
     html += f"""
                     </table>
                 </div>
                 
-                <!-- X3: Follow-up Tracker -->
+                <!-- X3: Follow-up Tracker (RESTORED) -->
                 <div class="card">
                     <div class="card-header">
                         <h2><i class="fa-solid fa-reply-all"></i> X3: Awaiting Reply <span class="badge">{len(followups)}</span></h2>
@@ -273,10 +186,33 @@ def generate_dashboard_html(pending: list, flagged: list, commitments: list, dig
                         <tr><th>Sent To</th><th>Subject</th></tr>
     """
     if not followups:
-        html += "<tr><td colspan='2' style='color: var(--text-muted);'>No outstanding outbound threads.</td></tr>"
+        html += "<tr><td colspan='2' style='color: var(--text-muted);'><i class='fa-solid fa-inbox' style='color: var(--success); margin-right: 8px;'></i> No outstanding outbound threads.</td></tr>"
     else:
         for f_msg in followups:
-            html += f"<tr><td style='font-weight: 500;'>{f_msg['to']}</td><td style='color: var(--text-muted);'>{f_msg['subject']}</td></tr>"
+            html += f"<tr><td style='font-weight: 500; color: var(--mck-navy);'>{f_msg['to']}</td><td style='color: var(--text-muted); font-size: 0.85rem;'>{f_msg['subject']}</td></tr>"
+
+    html += f"""
+                    </table>
+                </div>
+                
+                <!-- X4: Autonomous Scheduling -->
+                <div class="card">
+                    <div class="card-header">
+                        <h2><i class="fa-solid fa-robot"></i> X4: Agentic Resolutions <span class="badge">{len(x4_data)}</span></h2>
+                    </div>
+                    <table>
+                        <tr><th>Detected Event</th><th>Agent Action Taken</th></tr>
+    """
+    if not x4_data:
+        html += "<tr><td colspan='2' style='color: var(--text-muted);'>No complex conflicts required resolution.</td></tr>"
+    else:
+        for x4 in x4_data:
+            html += f"""
+                        <tr>
+                            <td style='font-weight: 500;'>{x4['conflict']}</td>
+                            <td><span class="pill green" style="margin-bottom: 5px;"><i class="fa-solid fa-wand-magic-sparkles"></i> {x4['action']}</span><br><span style="font-size: 0.75rem; color: var(--text-muted);"><i class="fa-solid fa-lock"></i> {x4['status']}</span></td>
+                        </tr>
+            """
 
     html += f"""
                     </table>
@@ -340,17 +276,14 @@ def generate_dashboard_html(pending: list, flagged: list, commitments: list, dig
         </div>
 
         <script>
-            // Set timestamp
             const options = {{ weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }};
             document.getElementById('timestamp').innerHTML += new Date().toLocaleDateString('en-US', options);
             
-            // Accordion Logic
             function toggleDetails(id) {{
                 const el = document.getElementById(id);
                 el.style.display = el.style.display === "block" ? "none" : "block";
             }}
             
-            // X1 Command Generator
             function generateCommand() {{
                 const input = document.getElementById('x1-input').value;
                 if (!input) return;

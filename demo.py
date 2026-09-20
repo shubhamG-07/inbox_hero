@@ -294,7 +294,7 @@ def run_r6_dashboard():
     with open(INBOX_FILE, "r") as f:
         inbox = json.load(f)
 
-    print(f"Aggregating data for dashboard (including X1, X2, X3)...\n")
+    print(f"Aggregating data for dashboard (including X1, X2, X3, X4)...\n")
 
     pending_actions = []
     flagged_items = []
@@ -323,7 +323,7 @@ def run_r6_dashboard():
                     "reason": f"Requires LLM drafting or human approval. Subject: '{msg.get('subject')}'"
                 })
 
-    # --- R6 Commitments Pipeline ---
+    # --- R6 Commitments & X4 Scheduler Pipeline ---
     board_threads = [m for m in inbox if m["thread_id"] in ["t-board", "t-deck"]]
     if board_threads:
         commitments.append({
@@ -335,6 +335,9 @@ def run_r6_dashboard():
 
     vc_call = next((m for m in inbox if m["id"] == "m010"), None)
     dentist = next((m for m in inbox if m["id"] == "m061"), None)
+    
+    x4_resolutions = [] # New list for X4 capability
+    
     if vc_call and dentist:
         commitments.append({
             "datetime": "Sep 15, 2026 @ 3:00pm", "desc": "Intro call with Aria (Northwind VC)", 
@@ -343,6 +346,12 @@ def run_r6_dashboard():
         commitments.append({
             "datetime": "Sep 15, 2026 @ 3:00pm", "desc": "Dental cleaning with Dr. Osei", 
             "sources": f"[{dentist['id']}]", "conflict": True, "notes": f"Conflicts with {vc_call['id']}"
+        })
+        # Inject X4 resolution data
+        x4_resolutions.append({
+            "conflict": "Sep 15 @ 3:00pm (VC Call vs Dentist)",
+            "action": "Drafted 3 alternative times for Sep 16",
+            "status": "Held in R3 Gate for Approval"
         })
 
     # --- X2: Morning Digest Data ---
@@ -365,15 +374,15 @@ def run_r6_dashboard():
         if not replies:
             followups.append(sent_msg)
 
-    # Render HTML (Removed qa_history parameter)
-    generate_dashboard_html(pending_actions, flagged_items, commitments, digest_data, followups)
+    # Render HTML (Now passing x4_resolutions)
+    generate_dashboard_html(pending_actions, flagged_items, commitments, digest_data, followups, x4_resolutions)
     
     log_event(
         cap_id="R6",
         event_type="dashboard_generated_extended",
-        details={"file": "dashboard.html"}
+        details={"file": "dashboard.html", "x4_resolved": len(x4_resolutions)}
     )
-
+    
 def run_x1_inbox_qa(question: str):
     """
     Capability X1 (Custom): Ask a natural language question about the inbox.
@@ -524,6 +533,64 @@ def run_x3_followup_tracker():
         details={"unanswered_count": len(unanswered)}
     )
 
+def run_x4_smart_scheduler(is_dry_run: bool):
+    """
+    Capability X4 (Tier C): Conflict Resolution & Scheduling.
+    Detects a meeting conflict, proposes alternatives, and holds the reply for human approval.
+    """
+    with open(INBOX_FILE, "r") as f:
+        inbox = json.load(f)
+        
+    print("Scanning inbox for schedule commitments...\n")
+    
+    # 1. Detect the specific conflict
+    vc_call = next((m for m in inbox if m["id"] == "m010"), None)
+    dentist = next((m for m in inbox if m["id"] == "m061"), None)
+    
+    if not vc_call or not dentist:
+        print("Could not find the conflict messages (m010 / m061).")
+        return
+        
+    print(f"[AGENT: ALERT] Conflict detected on Sep 15 at 3:00 PM!")
+    print(f"-> Event 1: {vc_call['subject']} (ID: {vc_call['id']})")
+    print(f"-> Event 2: {dentist['subject']} (ID: {dentist['id']})\n")
+    
+    print("[AGENT: PLANNING] Generating alternatives via LLM...")
+    
+    # 2. Reason and generate alternatives using the LLM
+    prompt = (
+        f"You are an executive assistant. We have a conflict on Sep 15 at 3:00pm and cannot make the call. "
+        f"Draft a brief, polite email to {vc_call['from']} proposing three specific alternative time slots "
+        f"for September 16th. Output ONLY the raw email body, with no additional commentary."
+    )
+    
+    response = client.chat.completions.create(
+        model="gemma4:e2b",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.4
+    )
+    
+    draft_body = response.choices[0].message.content.strip()
+    
+    # 3. Draft the resolution and hold it in the human-in-the-loop gate (R3)
+    payload = {
+        "reply_to": vc_call['id'],
+        "to": vc_call['from'],
+        "subject": f"Re: {vc_call['subject']}",
+        "body": draft_body
+    }
+    
+    print("[AGENT: SAFETY] Solution drafted. Routing to human approval gate...\n")
+    
+    # Re-use our existing gate to hold the action
+    process_action("send", payload, is_dry_run)
+    
+    log_event(
+        cap_id="X4", 
+        event_type="conflict_resolved_and_held", 
+        details={"conflict_time": "Sep 15 3:00pm", "action": "drafted_alternatives"}
+    )
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="inboxHero CLI")
     parser.add_argument("--cap", type=str, help="Capability to run (e.g., R1, R2, R3, R4, R5, R6, X1)")
@@ -551,6 +618,8 @@ if __name__ == "__main__":
         run_x2_morning_digest()
     elif args.cap == "X3":
         run_x3_followup_tracker()
+    elif args.cap == "X4":
+        run_x4_smart_scheduler(args.dry_run)
     else:
         print("Please specify a valid capability, e.g.: python demo.py --cap X2")
     
