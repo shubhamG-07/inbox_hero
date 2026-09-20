@@ -2,6 +2,7 @@ import os
 import json
 import argparse
 from openai import OpenAI
+from config import OLLAMA_BASE_URL, OLLAMA_API_KEY, MODEL_NAME
 from config import INBOX_FILE
 from pipeline.rules import triage_by_rules
 from pipeline.retriever import get_thread_context, format_context_for_prompt
@@ -11,11 +12,12 @@ from memory import save_preference, load_preferences
 from pipeline.security import detect_hostile_intent
 from pipeline.dashboard import generate_dashboard_html
 
+
 # Initialize LLM Client for Ollama
 # By overriding the base_url, we redirect the client away from OpenAI's servers to your local machine.
 client = OpenAI(
-    base_url="http://localhost:11434/v1",
-    api_key="ollama"  # The client requires a string here, but Ollama ignores it.
+    base_url=OLLAMA_BASE_URL,
+    api_key=OLLAMA_API_KEY
 )
 
 def mock_llm_triage(message: dict) -> dict:
@@ -116,7 +118,7 @@ def run_r2_grounded_reply(target_msg_id: str = "m008"):
     print(f"Drafting reply for {target_msg_id} using context from {cited_ids}...\n")
 
     response = client.chat.completions.create(
-        model="gemma4:e2b",
+        model=MODEL_NAME,
         messages=[
             {"role": "system", "content": system_instruction},
             {"role": "user", "content": user_payload}
@@ -382,7 +384,7 @@ def run_r6_dashboard():
         event_type="dashboard_generated_extended",
         details={"file": "dashboard.html", "x4_resolved": len(x4_resolutions)}
     )
-    
+
 def run_x1_inbox_qa(question: str):
     """
     Capability X1 (Custom): Ask a natural language question about the inbox.
