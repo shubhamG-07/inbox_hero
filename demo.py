@@ -30,6 +30,59 @@ def mock_llm_triage(message: dict) -> dict:
         "reason": "LLM Placeholder: Needs human review or complex reply"
     }
 
+def execute_llm_triage(msg: dict) -> dict:
+    """
+    R1: Active LLM reasoning engine. Evaluates emails that bypass the 
+    deterministic rules and returns a strict JSON routing decision.
+    """
+    print(f"[AGENT: REASONING] Evaluating message {msg.get('id')} via LLM...")
+    
+    prompt = (
+        "You are an autonomous executive assistant triage engine. Evaluate this email and determine the best "
+        "disposition from this exact list: [reply, archive, defer, delegate, escalate].\n\n"
+        f"From: {msg.get('from')}\n"
+        f"Subject: {msg.get('subject')}\n"
+        f"Body: {msg.get('body')}\n\n"
+        "Output ONLY a raw JSON object with no markdown formatting, conversational filler, or extra text. "
+        "Schema requirement: {\"disposition\": \"string\", \"reason\": \"string\"}"
+    )
+    
+    try:
+        response = client.chat.completions.create(
+            model=MODEL_NAME,
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1
+        )
+        
+        raw_content = response.choices[0].message.content.strip()
+        
+        # Strip markdown code blocks if the LLM hallucinated them despite instructions
+        if raw_content.startswith("```json"):
+            raw_content = raw_content[7:-3].strip()
+        elif raw_content.startswith("```"):
+            raw_content = raw_content[3:-3].strip()
+            
+        decision = json.loads(raw_content)
+        
+        # Safety catch: if LLM outputs "reasoning" instead of "reason", map it correctly
+        if "reasoning" in decision and "reason" not in decision:
+            decision["reason"] = decision.pop("reasoning")
+        elif "reason" not in decision:
+            decision["reason"] = "LLM provided no reason."
+        
+        # Enforce strict disposition schema
+        valid_dispositions = ["reply", "archive", "defer", "delegate", "escalate"]
+        if decision.get("disposition") not in valid_dispositions:
+            decision["disposition"] = "escalate"
+            decision["reason"] += " (Forced to escalate: LLM hallucinated invalid disposition)"
+            
+        return decision
+        
+    except Exception as e:
+        print(f"[LLM ERROR] Parsing failed for {msg.get('id')}: {str(e)}")
+        # Fallback to human if the model crashes or outputs invalid JSON
+        return {"disposition": "escalate", "reason": "System fallback due to LLM parsing failure."}
+    
 def run_r1_zero_inbox():
     """
     Capability R1: Assign every message exactly one disposition.
@@ -59,7 +112,7 @@ def run_r1_zero_inbox():
         if decision:
             rule_handled_count += 1
         else:
-            decision = mock_llm_triage(msg)
+            decision = execute_llm_triage(msg)
             
         if not decision:
             undecided_count += 1
